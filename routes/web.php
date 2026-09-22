@@ -9,7 +9,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::view('dashboard', 'dashboard')->name('dashboard');
 
     // Group Route Admin untuk Pineagrail
-    Route::prefix('admin')->name('admin.')->group(function () {
+    Route::prefix('admin')
+    ->name('admin.')
+    ->middleware(['role:superadmin|admin'])
+    ->group(function () {
         Route::get('/users', UserIndex::class)->name('users.index');
     });
 });

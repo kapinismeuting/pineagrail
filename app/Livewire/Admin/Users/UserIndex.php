@@ -5,76 +5,180 @@ namespace App\Livewire\Admin\Users;
 use App\Models\User;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
 use Livewire\Component;
 use Livewire\WithPagination;
+use Spatie\Permission\Models\Role;
 
 class UserIndex extends Component
 {
     use WithPagination;
 
-    // Field pencarian reaktif
+    // Search & Filter
     public string $search = '';
 
-    // Reset halaman pagination saat kata kunci pencarian berubah
+    // Form State (Create & Edit)
+    public bool $showCreateModal = false;
+    public bool $showEditModal = false;
+
+    public ?int $editingUserId = null;
+    public string $name = '';
+    public string $email = '';
+    public string $username = '';
+    public string $role = 'customer';
+    public string $password = '';
+    public string $password_confirmation = '';
+
+    // Toggle Visibility Password
+    public bool $showPassword = false;
+    public bool $showPasswordConfirmation = false;
+
     public function updatedSearch(): void
     {
         $this->resetPage();
     }
 
     /**
-     * Menaikkan role pengguna menjadi Superadmin.
+     * Toggle status tampil/sembunyi password.
      */
-    public function promote(int $userId): void
+    public function togglePasswordVisibility(): void
     {
-        $targetUser = User::findOrFail($userId);
+        $this->showPassword = ! $this->showPassword;
+    }
 
-        try {
-            // Evaluasi Policy
-            Gate::authorize('promoteToSuperadmin', $targetUser);
-
-            // Perbarui role menggunakan Spatie Permission
-            $targetUser->syncRoles(['superadmin']);
-
-            session()->flash('success', "Berhasil menaikkan {$targetUser->name} menjadi Superadmin.");
-        } catch (AuthorizationException $e) {
-            session()->flash('error', $e->getMessage());
-        }
+    public function togglePasswordConfirmationVisibility(): void
+    {
+        $this->showPasswordConfirmation = ! $this->showPasswordConfirmation;
     }
 
     /**
-     * Menurunkan role Superadmin menjadi Admin atau Customer.
+     * Reset properti form input.
      */
-    public function demote(int $userId, string $newRole = 'admin'): void
+    public function resetForm(): void
     {
-        $targetUser = User::findOrFail($userId);
-
-        try {
-            // Evaluasi Policy (Memastikan bukan self-demote atau superadmin terakhir)
-            Gate::authorize('demoteFromSuperadmin', $targetUser);
-
-            $targetUser->syncRoles([$newRole]);
-
-            // Catat pesan untuk ditampilkan saat user tersebut login
-            $targetUser->update([
-                'action_by_id' => auth()->id(),
-                'status_message' => "Hak akses Anda telah diubah menjadi " . ucfirst($newRole) . " oleh " . auth()->user()->name,
-            ]);
-
-            session()->flash('success', "Berhasil menurunkan hak akses {$targetUser->name} menjadi {$newRole}.");
-        } catch (AuthorizationException $e) {
-            session()->flash('error', $e->getMessage());
-        }
+        $this->reset([
+            'name',
+            'email',
+            'username',
+            'role',
+            'password',
+            'password_confirmation',
+            'editingUserId',
+            'showPassword',
+            'showPasswordConfirmation'
+        ]);
+        $this->resetValidation();
     }
 
     /**
-     * Menghapus pengguna (Soft Delete).
+     * Buka Modal Tambah User.
+     */
+    public function openCreateModal(): void
+    {
+        $this->resetForm();
+        $this->showCreateModal = true;
+    }
+
+    /**
+     * Simpan User Baru (Create).
+     */
+    public function createUser(): void
+    {
+        $this->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
+            'username' => ['nullable', 'string', 'max:30', 'alpha_dash', 'unique:users,username'],
+            'role' => ['required', 'string', 'exists:roles,name'],
+            'password' => ['required', 'string', 'min:8'],
+        ]);
+
+        $user = User::create([
+            'name' => $this->name,
+            'email' => $this->email,
+            'username' => $this->username ?: null,
+            'password' => Hash::make($this->password),
+            'email_verified_at' => now(),
+        ]);
+
+        $user->assignRole($this->role);
+
+        $this->showCreateModal = false;
+        $this->resetForm();
+
+        session()->flash('success', "Pengguna {$user->name} berhasil ditambahkan.");
+    }
+
+    /**
+     * Buka Modal Edit User.
+     */
+    public function openEditModal(int $userId): void
+    {
+        $this->resetForm();
+        $user = User::findOrFail($userId);
+
+        $this->editingUserId = $user->id;
+        $this->name = $user->name;
+        $this->email = $user->email;
+        $this->username = $user->username ?? '';
+        $this->role = $user->roles->first()?->name ?? 'customer';
+
+        $this->showEditModal = true;
+    }
+
+    /**
+     * Perbarui Data User (Update).
+     */
+    public function updateUser(): void
+    {
+        $user = User::findOrFail($this->editingUserId);
+
+        $this->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
+            'username' => ['nullable', 'string', 'max:30', 'alpha_dash', Rule::unique('users')->ignore($user->id)],
+            'role' => ['required', 'string', 'exists:roles,name'],
+            'password' => ['nullable', 'string', 'min:8'], // Opsional saat edit
+        ]);
+
+        // Cek proteksi jika role diubah dari Superadmin
+        if ($user->hasRole('superadmin') && $this->role !== 'superadmin') {
+            try {
+                Gate::authorize('demoteFromSuperadmin', $user);
+            } catch (AuthorizationException $e) {
+                session()->flash('error', $e->getMessage());
+                $this->showEditModal = false;
+                return;
+            }
+        }
+
+        $userData = [
+            'name' => $this->name,
+            'email' => $this->email,
+            'username' => $this->username ?: null,
+        ];
+
+        if (! empty($this->password)) {
+            $userData['password'] = Hash::make($this->password);
+        }
+
+        $user->update($userData);
+        $user->syncRoles([$this->role]);
+
+        $this->showEditModal = false;
+        $this->resetForm();
+
+        session()->flash('success', "Data pengguna {$user->name} berhasil diperbarui.");
+    }
+
+    /**
+     * Menghapus user (Soft Delete).
      */
     public function delete(int $userId): void
     {
         $targetUser = User::findOrFail($userId);
 
         try {
-            // Evaluasi Policy (Memastikan bukan self-delete atau superadmin terakhir)
             Gate::authorize('delete', $targetUser);
 
             $targetUser->update([
@@ -91,7 +195,6 @@ class UserIndex extends Component
 
     public function render()
     {
-        // Query user dengan eager loading 'roles' dan filter pencarian
         $users = User::with('roles')
             ->where(function ($query) {
                 $query->where('name', 'like', '%' . $this->search . '%')
@@ -101,8 +204,11 @@ class UserIndex extends Component
             ->latest()
             ->paginate(10);
 
+        $availableRoles = Role::all();
+
         return view('components.admin.users.user-index', [
             'users' => $users,
+            'availableRoles' => $availableRoles,
         ]);
     }
 }

@@ -5,6 +5,9 @@
             <h1 class="text-2xl font-bold tracking-tight">Manajemen Pengguna</h1>
             <p class="text-sm text-zinc-500 dark:text-zinc-400">Kelola akun pengguna, peran, dan hak akses di pineagrail.com</p>
         </div>
+        <flux:button wire:click="openCreateModal" variant="primary" icon="plus">
+            Tambah Pengguna
+        </flux:button>
     </div>
 
     <!-- Notifikasi Flash -->
@@ -68,28 +71,15 @@
                             {{ $user->created_at->format('d M Y') }}
                         </td>
                         <td class="px-6 py-4 text-right space-x-2">
-                            <!-- Tombol Promote / Demote -->
-                            @if(!$user->hasRole('superadmin'))
-                                <flux:button
-                                    wire:click="promote({{ $user->id }})"
-                                    wire:confirm="Yakin ingin menaikkan user ini menjadi Superadmin?"
-                                    size="xs"
-                                    variant="filled"
-                                >
-                                    Promote
-                                </flux:button>
-                            @else
-                                <flux:button
-                                    wire:click="demote({{ $user->id }}, 'admin')"
-                                    wire:confirm="Yakin ingin menurunkan peran Superadmin ini menjadi Admin?"
-                                    size="xs"
-                                    variant="subtle"
-                                >
-                                    Demote
-                                </flux:button>
-                            @endif
+                            <flux:button
+                                wire:click="openEditModal({{ $user->id }})"
+                                size="xs"
+                                variant="subtle"
+                                icon="pencil-square"
+                            >
+                                Edit
+                            </flux:button>
 
-                            <!-- Tombol Hapus -->
                             <flux:button
                                 wire:click="delete({{ $user->id }})"
                                 wire:confirm="Yakin ingin menghapus pengguna ini?"
@@ -111,8 +101,129 @@
         </table>
     </div>
 
-    <!-- Pagination -->
     <div>
         {{ $users->links() }}
     </div>
+
+    <!-- MODAL CREATE USER -->
+    <flux:modal wire:model="showCreateModal" class="md:w-md space-y-6">
+        <div>
+            <flux:heading size="lg">Tambah Pengguna Baru</flux:heading>
+            <flux:subheading>Buat akun baru secara manual untuk sistem pineagrail.com</flux:subheading>
+        </div>
+
+        <form wire:submit="createUser" class="space-y-4">
+            <flux:input wire:model="name" label="Nama Lengkap" placeholder="Masukkan nama lengkap" required />
+            <flux:input wire:model="email" type="email" label="Email" placeholder="nama@domain.com" required />
+            <flux:input wire:model="username" label="Username (Opsional)" placeholder="username" />
+
+            <flux:select wire:model="role" label="Peran (Role)">
+                @foreach($availableRoles as $r)
+                    <flux:select.option value="{{ $r->name }}">{{ ucfirst($r->name) }}</flux:select.option>
+                @endforeach
+            </flux:select>
+
+            <!-- Password Field dengan Toggle Icon Visibility -->
+            <flux:input
+                wire:model="password"
+                :type="$showPassword ? 'text' : 'password'"
+                label="Password"
+                placeholder="Minimal 8 karakter"
+                required
+            >
+                <x-slot name="iconTrailing">
+                    <button type="button" wire:click="togglePasswordVisibility" class="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200">
+                        @if($showPassword)
+                            <flux:icon name="eye-slash" class="size-4" />
+                        @else
+                            <flux:icon name="eye" class="size-4" />
+                        @endif
+                    </button>
+                </x-slot>
+            </flux:input>
+
+            <!-- Confirm Password Field dengan Toggle Icon Visibility -->
+            <flux:input
+                wire:model="password_confirmation"
+                :type="$showPasswordConfirmation ? 'text' : 'password'"
+                label="Konfirmasi Password"
+                placeholder="Masukkan ulang password"
+                required
+            >
+                <x-slot name="iconTrailing">
+                    <button type="button" wire:click="togglePasswordConfirmationVisibility" class="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200">
+                        @if($showPasswordConfirmation)
+                            <flux:icon name="eye-slash" class="size-4" />
+                        @else
+                            <flux:icon name="eye" class="size-4" />
+                        @endif
+                    </button>
+                </x-slot>
+            </flux:input>
+
+            <div class="flex justify-end gap-2 pt-4">
+                <flux:button wire:click="$set('showCreateModal', false)" variant="ghost">Batal</flux:button>
+                <flux:button type="submit" variant="primary">Simpan Pengguna</flux:button>
+            </div>
+        </form>
+    </flux:modal>
+
+    <!-- MODAL EDIT USER -->
+    <flux:modal wire:model="showEditModal" class="md:w-md space-y-6">
+        <div>
+            <flux:heading size="lg">Edit Data Pengguna</flux:heading>
+            <flux:subheading>Perbarui informasi akun dan hak akses pengguna ini.</flux:subheading>
+        </div>
+
+        <form wire:submit="updateUser" class="space-y-4">
+            <flux:input wire:model="name" label="Nama Lengkap" required />
+            <flux:input wire:model="email" type="email" label="Email" required />
+            <flux:input wire:model="username" label="Username (Opsional)" />
+
+            <flux:select wire:model="role" label="Peran (Role)">
+                @foreach($availableRoles as $r)
+                    <flux:select.option value="{{ $r->name }}">{{ ucfirst($r->name) }}</flux:select.option>
+                @endforeach
+            </flux:select>
+
+            <!-- Password Baru (Opsional saat Edit) -->
+            <flux:input
+                wire:model="password"
+                :type="$showPassword ? 'text' : 'password'"
+                label="Password Baru (Kosongkan jika tidak diubah)"
+            >
+                <x-slot name="iconTrailing">
+                    <button type="button" wire:click="togglePasswordVisibility" class="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200">
+                        @if($showPassword)
+                            <flux:icon name="eye-slash" class="size-4" />
+                        @else
+                            <flux:icon name="eye" class="size-4" />
+                        @endif
+                    </button>
+                </x-slot>
+            </flux:input>
+
+            <!-- Konfirmasi Password Baru -->
+            <flux:input
+                wire:model="password_confirmation"
+                :type="$showPasswordConfirmation ? 'text' : 'password'"
+                label="Konfirmasi Password Baru"
+            >
+                <x-slot name="iconTrailing">
+                    <button type="button" wire:click="togglePasswordConfirmationVisibility" class="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200">
+                        @if($showPasswordConfirmation)
+                            <flux:icon name="eye-slash" class="size-4" />
+                        @else
+                            <flux:icon name="eye" class="size-4" />
+                        @endif
+                    </button>
+                </x-slot>
+            </flux:input>
+
+            <div class="flex justify-end gap-2 pt-4">
+                <flux:button wire:click="$set('showEditModal', false)" variant="ghost">Batal</flux:button>
+                <flux:button type="submit" variant="primary">Perbarui Data</flux:button>
+            </div>
+        </form>
+    </flux:modal>
 </div>
