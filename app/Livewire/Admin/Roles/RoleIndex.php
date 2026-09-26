@@ -2,24 +2,32 @@
 
 namespace App\Livewire\Admin\Roles;
 
+use Illuminate\Validation\Rule;
 use Livewire\Component;
 use Livewire\WithPagination;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
-use Illuminate\Validation\Rule;
 
 class RoleIndex extends Component
 {
     use WithPagination;
 
+    public function mount(): void
+    {
+        abort_unless(auth()->user()?->hasRole('superadmin'), 403);
+    }
+
     public string $search = '';
 
     // Modal State
     public bool $showCreateModal = false;
+
     public bool $showEditModal = false;
 
     public ?int $editingRoleId = null;
+
     public string $name = '';
+
     public array $selectedPermissions = [];
 
     public function updatedSearch(): void
@@ -92,6 +100,7 @@ class RoleIndex extends Component
 
         if (in_array($role->name, ['superadmin', 'admin', 'customer'])) {
             session()->flash('error', "Role bawaan sistem ({$role->name}) tidak boleh dihapus.");
+
             return;
         }
 
@@ -102,9 +111,11 @@ class RoleIndex extends Component
 
     public function render()
     {
+        abort_unless(auth()->user()?->hasRole('superadmin'), 403);
+
         $roles = Role::with(['permissions'])
             ->withCount('users')
-            ->where('name', 'like', '%' . $this->search . '%')
+            ->where('name', 'like', '%'.$this->search.'%')
             ->paginate(10);
 
         $permissions = Permission::all();

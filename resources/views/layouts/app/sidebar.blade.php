@@ -26,7 +26,7 @@
         <flux:spacer />
 
         <flux:sidebar.nav>
-            {{-- Menambahkan Navigasi Admin jika pengguna memiliki role superadmin atau admin --}}
+            {{-- Admin navigation is available to admins and superadmins. --}}
             @hasanyrole('superadmin|admin')
                 <flux:sidebar.group :heading="__('Administration')" class="grid mt-4">
                     <flux:sidebar.item icon="users" :href="route('admin.users.index')"
@@ -34,10 +34,12 @@
                         {{ __('Users Management') }}
                     </flux:sidebar.item>
 
-                    <flux:sidebar.item icon="key" :href="route('admin.roles.index')"
-                        :current="request()->routeIs('admin.roles.*')" wire:navigate>
-                        {{ __('Roles Management') }}
-                    </flux:sidebar.item>
+                    @role('superadmin')
+                        <flux:sidebar.item icon="key" :href="route('admin.roles.index')"
+                            :current="request()->routeIs('admin.roles.*')" wire:navigate>
+                            {{ __('Roles Management') }}
+                        </flux:sidebar.item>
+                    @endrole
                 </flux:sidebar.group>
             @endhasanyrole
         </flux:sidebar.nav>

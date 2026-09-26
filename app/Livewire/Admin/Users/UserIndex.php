@@ -20,18 +20,26 @@ class UserIndex extends Component
 
     // Form State (Create & Edit)
     public bool $showCreateModal = false;
+
     public bool $showEditModal = false;
 
     public ?int $editingUserId = null;
+
     public string $name = '';
+
     public string $email = '';
+
     public string $username = '';
+
     public string $role = 'customer';
+
     public string $password = '';
+
     public string $password_confirmation = '';
 
     // Toggle Visibility Password
     public bool $showPassword = false;
+
     public bool $showPasswordConfirmation = false;
 
     public function updatedSearch(): void
@@ -66,7 +74,7 @@ class UserIndex extends Component
             'password_confirmation',
             'editingUserId',
             'showPassword',
-            'showPasswordConfirmation'
+            'showPasswordConfirmation',
         ]);
         $this->resetValidation();
     }
@@ -85,6 +93,10 @@ class UserIndex extends Component
      */
     public function createUser(): void
     {
+        if ($this->role === 'superadmin' && ! auth()->user()->hasRole('superadmin')) {
+            abort(403);
+        }
+
         $this->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
@@ -117,6 +129,8 @@ class UserIndex extends Component
         $this->resetForm();
         $user = User::findOrFail($userId);
 
+        $this->abortIfSuperadminIsHidden($user);
+
         $this->editingUserId = $user->id;
         $this->name = $user->name;
         $this->email = $user->email;
@@ -133,6 +147,12 @@ class UserIndex extends Component
     {
         $user = User::findOrFail($this->editingUserId);
 
+        $this->abortIfSuperadminIsHidden($user);
+
+        if ($this->role === 'superadmin' && ! auth()->user()->hasRole('superadmin')) {
+            abort(403);
+        }
+
         $this->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
@@ -148,6 +168,7 @@ class UserIndex extends Component
             } catch (AuthorizationException $e) {
                 session()->flash('error', $e->getMessage());
                 $this->showEditModal = false;
+
                 return;
             }
         }
@@ -178,6 +199,8 @@ class UserIndex extends Component
     {
         $targetUser = User::findOrFail($userId);
 
+        $this->abortIfSuperadminIsHidden($targetUser);
+
         try {
             Gate::authorize('delete', $targetUser);
 
@@ -195,20 +218,36 @@ class UserIndex extends Component
 
     public function render()
     {
-        $users = User::with('roles')
+        $usersQuery = User::with('roles')
             ->where(function ($query) {
-                $query->where('name', 'like', '%' . $this->search . '%')
-                    ->orWhere('email', 'like', '%' . $this->search . '%')
-                    ->orWhere('username', 'like', '%' . $this->search . '%');
-            })
-            ->latest()
-            ->paginate(10);
+                $query->where('name', 'like', '%'.$this->search.'%')
+                    ->orWhere('email', 'like', '%'.$this->search.'%')
+                    ->orWhere('username', 'like', '%'.$this->search.'%');
+            });
 
-        $availableRoles = Role::all();
+        if (! auth()->user()->hasRole('superadmin')) {
+            $usersQuery->withoutRole('superadmin');
+        }
+
+        $users = $usersQuery->latest()->paginate(10);
+
+        $availableRoles = Role::query()
+            ->when(
+                ! auth()->user()->hasRole('superadmin'),
+                fn ($query) => $query->where('name', '!=', 'superadmin'),
+            )
+            ->get();
 
         return view('components.admin.users.user-index', [
             'users' => $users,
             'availableRoles' => $availableRoles,
         ]);
+    }
+
+    private function abortIfSuperadminIsHidden(User $user): void
+    {
+        if ($user->hasRole('superadmin') && ! auth()->user()->hasRole('superadmin')) {
+            abort(403);
+        }
     }
 }
