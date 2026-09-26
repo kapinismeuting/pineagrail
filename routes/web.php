@@ -1,6 +1,7 @@
 <?php
 
 use App\Livewire\Admin\Users\UserIndex;
+use App\Livewire\Admin\Roles\RoleIndex;
 use Illuminate\Support\Facades\Route;
 
 Route::view('/', 'welcome')->name('home');
@@ -14,6 +15,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     ->middleware(['role:superadmin|admin'])
     ->group(function () {
         Route::get('/users', UserIndex::class)->name('users.index');
+        Route::get('/roles', RoleIndex::class)->name('roles.index');
     });
 });
 

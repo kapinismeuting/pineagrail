@@ -3,7 +3,8 @@
     <div class="flex items-center justify-between">
         <div>
             <h1 class="text-2xl font-bold tracking-tight">Manajemen Pengguna</h1>
-            <p class="text-sm text-zinc-500 dark:text-zinc-400">Kelola akun pengguna, peran, dan hak akses di pineagrail.com</p>
+            <p class="text-sm text-zinc-500 dark:text-zinc-400">Kelola akun pengguna, peran, dan hak akses di
+                pineagrail.com</p>
         </div>
         <flux:button wire:click="openCreateModal" variant="primary" icon="plus">
             Tambah Pengguna
@@ -12,24 +13,23 @@
 
     <!-- Notifikasi Flash -->
     @if (session()->has('success'))
-        <div class="p-4 text-sm text-green-800 rounded-lg bg-green-50 dark:bg-zinc-800 dark:text-green-400 border border-green-200 dark:border-green-800">
+        <div
+            class="p-4 text-sm text-green-800 rounded-lg bg-green-50 dark:bg-zinc-800 dark:text-green-400 border border-green-200 dark:border-green-800">
             {{ session('success') }}
         </div>
     @endif
 
     @if (session()->has('error'))
-        <div class="p-4 text-sm text-red-800 rounded-lg bg-red-50 dark:bg-zinc-800 dark:text-red-400 border border-red-200 dark:border-red-800">
+        <div
+            class="p-4 text-sm text-red-800 rounded-lg bg-red-50 dark:bg-zinc-800 dark:text-red-400 border border-red-200 dark:border-red-800">
             {{ session('error') }}
         </div>
     @endif
 
     <!-- Input Pencarian -->
     <div class="max-w-md">
-        <flux:input
-            wire:model.live.debounce.300ms="search"
-            placeholder="Cari nama, email, atau username..."
-            icon="magnifying-glass"
-        />
+        <flux:input wire:model.live.debounce.300ms="search" placeholder="Cari nama, email, atau username..."
+            icon="magnifying-glass" />
     </div>
 
     <!-- Tabel Pengguna -->
@@ -54,11 +54,11 @@
                             </div>
                         </td>
                         <td class="px-6 py-4">
-                            {{ $user->username ? '@'.$user->username : '-' }}
+                            {{ $user->username ? '@' . $user->username : '-' }}
                         </td>
                         <td class="px-6 py-4">
                             @foreach ($user->roles as $role)
-                                @if($role->name === 'superadmin')
+                                @if ($role->name === 'superadmin')
                                     <flux:badge color="violet" size="sm">Superadmin</flux:badge>
                                 @elseif($role->name === 'admin')
                                     <flux:badge color="sky" size="sm">Admin</flux:badge>
@@ -71,21 +71,13 @@
                             {{ $user->created_at->format('d M Y') }}
                         </td>
                         <td class="px-6 py-4 text-right space-x-2">
-                            <flux:button
-                                wire:click="openEditModal({{ $user->id }})"
-                                size="xs"
-                                variant="subtle"
-                                icon="pencil-square"
-                            >
+                            <flux:button wire:click="openEditModal({{ $user->id }})" size="xs" variant="subtle"
+                                icon="pencil-square">
                                 Edit
                             </flux:button>
 
-                            <flux:button
-                                wire:click="delete({{ $user->id }})"
-                                wire:confirm="Yakin ingin menghapus pengguna ini?"
-                                size="xs"
-                                variant="danger"
-                            >
+                            <flux:button wire:click="delete({{ $user->id }})"
+                                wire:confirm="Yakin ingin menghapus pengguna ini?" size="xs" variant="danger">
                                 Hapus
                             </flux:button>
                         </td>
@@ -118,22 +110,18 @@
             <flux:input wire:model="username" label="Username (Opsional)" placeholder="username" />
 
             <flux:select wire:model="role" label="Peran (Role)">
-                @foreach($availableRoles as $r)
+                @foreach ($availableRoles as $r)
                     <flux:select.option value="{{ $r->name }}">{{ ucfirst($r->name) }}</flux:select.option>
                 @endforeach
             </flux:select>
 
             <!-- Password Field dengan Toggle Icon Visibility -->
-            <flux:input
-                wire:model="password"
-                :type="$showPassword ? 'text' : 'password'"
-                label="Password"
-                placeholder="Minimal 8 karakter"
-                required
-            >
+            <flux:input wire:model="password" :type="$showPassword ? 'text' : 'password'" label="Password"
+                placeholder="Minimal 8 karakter" required>
                 <x-slot name="iconTrailing">
-                    <button type="button" wire:click="togglePasswordVisibility" class="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200">
-                        @if($showPassword)
+                    <button type="button" wire:click="togglePasswordVisibility"
+                        class="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200">
+                        @if ($showPassword)
                             <flux:icon name="eye-slash" class="size-4" />
                         @else
                             <flux:icon name="eye" class="size-4" />
@@ -143,16 +131,12 @@
             </flux:input>
 
             <!-- Confirm Password Field dengan Toggle Icon Visibility -->
-            <flux:input
-                wire:model="password_confirmation"
-                :type="$showPasswordConfirmation ? 'text' : 'password'"
-                label="Konfirmasi Password"
-                placeholder="Masukkan ulang password"
-                required
-            >
+            <flux:input wire:model="password_confirmation" :type="$showPasswordConfirmation ? 'text' : 'password'"
+                label="Konfirmasi Password" placeholder="Masukkan ulang password" required>
                 <x-slot name="iconTrailing">
-                    <button type="button" wire:click="togglePasswordConfirmationVisibility" class="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200">
-                        @if($showPasswordConfirmation)
+                    <button type="button" wire:click="togglePasswordConfirmationVisibility"
+                        class="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200">
+                        @if ($showPasswordConfirmation)
                             <flux:icon name="eye-slash" class="size-4" />
                         @else
                             <flux:icon name="eye" class="size-4" />
@@ -181,20 +165,18 @@
             <flux:input wire:model="username" label="Username (Opsional)" />
 
             <flux:select wire:model="role" label="Peran (Role)">
-                @foreach($availableRoles as $r)
+                @foreach ($availableRoles as $r)
                     <flux:select.option value="{{ $r->name }}">{{ ucfirst($r->name) }}</flux:select.option>
                 @endforeach
             </flux:select>
 
             <!-- Password Baru (Opsional saat Edit) -->
-            <flux:input
-                wire:model="password"
-                :type="$showPassword ? 'text' : 'password'"
-                label="Password Baru (Kosongkan jika tidak diubah)"
-            >
+            <flux:input wire:model="password" :type="$showPassword ? 'text' : 'password'"
+                label="Password Baru (Kosongkan jika tidak diubah)">
                 <x-slot name="iconTrailing">
-                    <button type="button" wire:click="togglePasswordVisibility" class="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200">
-                        @if($showPassword)
+                    <button type="button" wire:click="togglePasswordVisibility"
+                        class="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200">
+                        @if ($showPassword)
                             <flux:icon name="eye-slash" class="size-4" />
                         @else
                             <flux:icon name="eye" class="size-4" />
@@ -204,14 +186,12 @@
             </flux:input>
 
             <!-- Konfirmasi Password Baru -->
-            <flux:input
-                wire:model="password_confirmation"
-                :type="$showPasswordConfirmation ? 'text' : 'password'"
-                label="Konfirmasi Password Baru"
-            >
+            <flux:input wire:model="password_confirmation" :type="$showPasswordConfirmation ? 'text' : 'password'"
+                label="Konfirmasi Password Baru">
                 <x-slot name="iconTrailing">
-                    <button type="button" wire:click="togglePasswordConfirmationVisibility" class="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200">
-                        @if($showPasswordConfirmation)
+                    <button type="button" wire:click="togglePasswordConfirmationVisibility"
+                        class="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200">
+                        @if ($showPasswordConfirmation)
                             <flux:icon name="eye-slash" class="size-4" />
                         @else
                             <flux:icon name="eye" class="size-4" />
